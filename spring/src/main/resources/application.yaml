@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: vagas
+  datasource:
+    # banco PRÓPRIO deste microsserviço (H2 em arquivo).
+    # AUTO_SERVER=TRUE permite 2 instâncias (8083 e 8084) no MESMO arquivo: o lock vale entre instâncias
+    url: jdbc:h2:file:./vagasdb;AUTO_SERVER=TRUE;LOCK_TIMEOUT=15000
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: ${SHOW_SQL:false}
+    open-in-view: false
+  h2:
+    console:
+      enabled: true   # http://localhost:8083/h2-console
+
+vagas:
+  dados-iniciais: true
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %msg%n"
+  level:
+    com.fatec: INFO
