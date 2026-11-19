@@ -1,9 +1,7 @@
 package com.fatec.vagas.controller.adapter;
 
 import com.fatec.vagas.controller.dto.request.VagaRequest;
-import com.fatec.vagas.controller.dto.response.ReducaoResponse;
 import com.fatec.vagas.controller.dto.response.VagaResponse;
-import com.fatec.vagas.entity.ResultadoReducao;
 import com.fatec.vagas.entity.Vaga;
 
 import java.time.Instant;
@@ -40,19 +38,6 @@ public class VagaControllerAdapter {
                 v.capacidade(),
                 v.disponiveis(),
                 v.valor()
-        );
-    }
-
-    public static ReducaoResponse castResponse(ResultadoReducao r) {
-        Vaga v = r.vaga();
-        return new ReducaoResponse(
-                r.aceita(),
-                r.motivo(),
-                v.id(),
-                v.titulo(),
-                v.valor(),
-                v.inicioEm().toEpochMilli(),
-                v.disponiveis()
         );
     }
 }

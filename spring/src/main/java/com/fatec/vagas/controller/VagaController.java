@@ -1,9 +1,7 @@
 package com.fatec.vagas.controller;
 
 import com.fatec.vagas.controller.adapter.VagaControllerAdapter;
-import com.fatec.vagas.controller.dto.request.ReducaoRequest;
 import com.fatec.vagas.controller.dto.request.VagaRequest;
-import com.fatec.vagas.controller.dto.response.ReducaoResponse;
 import com.fatec.vagas.controller.dto.response.VagaResponse;
 import com.fatec.vagas.service.VagaService;
 import org.springframework.http.HttpStatus;
@@ -43,11 +41,5 @@ public class VagaController {
     @ResponseStatus(HttpStatus.CREATED)
     public VagaResponse criar(@RequestBody VagaRequest request) {
         return VagaControllerAdapter.castResponse(service.criar(VagaControllerAdapter.castRequest(request)));
-    }
-
-    // INTERNO: só o reducao-ms chama (direto, serviço a serviço). Não existe rota no gateway para ele.
-    @PostMapping("/{id}/reduzir")
-    public ReducaoResponse reduzir(@PathVariable Long id, @RequestBody ReducaoRequest request) {
-        return VagaControllerAdapter.castResponse(service.reduzir(id, request.candidaturaId(), request.usuario()));
     }
 }

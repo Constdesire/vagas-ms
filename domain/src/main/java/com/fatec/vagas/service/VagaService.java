@@ -3,6 +3,9 @@ package com.fatec.vagas.service;
 import com.fatec.vagas.entity.Alocacao;
 import com.fatec.vagas.entity.ResultadoReducao;
 import com.fatec.vagas.entity.Vaga;
+import com.fatec.vagas.event.ResultadoPublicador;
+import com.fatec.vagas.event.dto.CandidaturaCriadaEvent;
+import com.fatec.vagas.event.dto.CandidaturaResultadoEvent;
 import com.fatec.vagas.repository.AlocacaoRepository;
 import com.fatec.vagas.repository.VagaRepository;
 import com.fatec.vagas.service.exception.NaoEncontradoException;
@@ -17,6 +20,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Regras das vagas. Classe comum (sem @Service), como o LoginService: o módulo spring a cria em
+ * config/VagaServiceConfig. O @Transactional é só a anotação do spring-tx; quem abre a transação é o Spring.
+ */
 public class VagaService {
 
     private static final Logger log = LoggerFactory.getLogger(VagaService.class);
@@ -25,10 +32,13 @@ public class VagaService {
 
     private final VagaRepository vagaRepository;
     private final AlocacaoRepository alocacaoRepository;
+    private final ResultadoPublicador publicador;
 
-    public VagaService(VagaRepository vagaRepository, AlocacaoRepository alocacaoRepository) {
+    public VagaService(VagaRepository vagaRepository, AlocacaoRepository alocacaoRepository,
+                       ResultadoPublicador publicador) {
         this.vagaRepository = vagaRepository;
         this.alocacaoRepository = alocacaoRepository;
+        this.publicador = publicador;
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +51,7 @@ public class VagaService {
         return vagaRepository.findById(id).orElseThrow(() -> new NaoEncontradoException("Vaga não encontrada"));
     }
 
-    /** Só o ADMIN chega aqui (/fatec/admin/vagas no gateway). */
+    /** Só o ADMIN chega aqui (rota /fatec/admin/vagas no gateway). */
     @Transactional
     public Vaga criar(Vaga nova) {
         if (nova.titulo() == null || nova.titulo().isBlank()) {
@@ -72,7 +82,33 @@ public class VagaService {
     }
 
     /**
+     * CANDIDATURA RECEBIDA PELA FILA (chamado pelo CandidaturaCriadaListener).
+     * <p>
+     * Tudo acontece numa ÚNICA transação do banco deste serviço: o lock da vaga, a redução e a alocação.
+     * O resultado (CONFIRMADA ou RECUSADA) é entregue ao publicador, que só envia à fila "candidatura-resultado"
+     * DEPOIS do commit. Se algo falhar, há rollback, nada é publicado e a mensagem é tentada de novo
+     * (a repetição não gasta outra vaga: veja a checagem de candidaturaId dentro de reduzir).
+     */
+    @Transactional
+    public void processarCandidatura(CandidaturaCriadaEvent e) {
+        CandidaturaResultadoEvent resultado;
+        try {
+            ResultadoReducao r = reduzir(e.vagaId(), e.candidaturaId(), e.usuario());
+            Vaga v = r.vaga();
+            resultado = new CandidaturaResultadoEvent(e.candidaturaId(), e.vagaId(), e.usuario(),
+                    r.aceita() ? "CONFIRMADA" : "RECUSADA", r.motivo(),
+                    v.titulo(), v.valor(), v.inicioEm().toEpochMilli());
+        } catch (NaoEncontradoException ex) {
+            resultado = new CandidaturaResultadoEvent(e.candidaturaId(), e.vagaId(), e.usuario(), "RECUSADA",
+                    "Esta vaga não existe mais", null, null, null);
+        }
+        log.info("[VAGAS  ] candidatura de {} para a vaga #{} -> {}", e.usuario(), e.vagaId(), resultado.status());
+        publicador.enviar(resultado);
+    }
+
+    /**
      * REDUÇÃO DE VAGA (a parte que exige concorrência).
+     * <p>
      * Várias candidaturas chegam ao mesmo tempo (threads diferentes). O SELECT ... FOR UPDATE
      * (findByIdWithLock) faz uma esperar a outra: dentro do lock lemos "disponiveis", retiramos UMA vaga e
      * gravamos. O lock só é solto no commit. Por isso nunca se aloca mais vagas do que existem.

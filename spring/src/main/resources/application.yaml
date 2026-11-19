@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8083}
+  port: ${PORT:${SERVER_PORT:8083}}
 
 spring:
   application:
@@ -11,6 +11,8 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+    hikari:
+      maximum-pool-size: 20   # consumidores (até 8) + chamadas do app ao mesmo tempo
   jpa:
     hibernate:
       ddl-auto: update
@@ -19,9 +21,36 @@ spring:
   h2:
     console:
       enabled: true   # http://localhost:8083/h2-console
+  rabbitmq:
+    host: ${RABBITMQ_HOST:jaragua.lmq.cloudamqp.com}
+    port: ${RABBITMQ_PORT:5671}
+    username: ${RABBITMQ_USER:bxvkfpaf}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST:bxvkfpaf}
+    ssl:
+      enabled: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        # se o banco der erro (ex.: timeout do lock), tenta de novo algumas vezes antes de desistir da mensagem
+        retry:
+          enabled: true
+          max-attempts: 5
+          initial-interval: 1s
+          multiplier: 2
+
+event:
+  candidatura-criada:
+    exchange: ex-candidatura-criada
+    queue: candidatura-criada
+  candidatura-resultado:
+    exchange: ex-candidatura-resultado
+    queue: candidatura-resultado
 
 vagas:
   dados-iniciais: true
+  consumidores: "4-8"      # consumidores em paralelo: várias candidaturas disputam a mesma vaga (o lock resolve)
+  atraso-simulado-ms: 1000 # demonstração: deixa a candidatura "em análise" por ~1s (0 para desligar)
 
 logging:
   pattern:

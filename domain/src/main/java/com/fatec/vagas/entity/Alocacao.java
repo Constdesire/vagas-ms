@@ -3,7 +3,7 @@ package com.fatec.vagas.entity;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Registro de cada vaga que foi retirada "alocou essa vaga, ela não existe mais". */
+/** Registro de cada vaga que foi retirada: "alocou essa vaga, ela não existe mais". */
 public record Alocacao(
         Long id,
         Long vagaId,
