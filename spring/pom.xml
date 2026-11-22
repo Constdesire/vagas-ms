@@ -131,8 +131,8 @@
 							<imageName>app</imageName>
 							<buildArgs>
 								<buildArg>-Ob</buildArg>
-								<buildArg>--parallelism=2</buildArg>
-								<buildArg>-J-Xmx4g</buildArg>
+								<buildArg>--parallelism=4</buildArg>
+								<buildArg>-J-Xmx10g</buildArg>
 							</buildArgs>
 						</configuration>
 						<executions>
