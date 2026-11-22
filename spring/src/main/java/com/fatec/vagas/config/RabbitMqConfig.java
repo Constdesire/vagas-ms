@@ -1,5 +1,8 @@
 package com.fatec.vagas.config;
 
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
+import com.fatec.vagas.event.dto.CandidaturaCriadaEvent;
+import com.fatec.vagas.event.dto.CandidaturaResultadoEvent;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -18,6 +21,9 @@ import org.springframework.context.annotation.Configuration;
  * Este serviço (vagas-ms) CONSOME "candidatura-criada" e PUBLICA em "candidatura-resultado".
  * As declarações são idempotentes: os outros serviços declaram as mesmas filas.
  */
+// Native image: os eventos (records) sao convertidos para/de JSON pelo Jackson via reflexao,
+// entao precisam ser registrados para o GraalVM. Sem isso o envio/leitura da fila falha no executavel nativo.
+@RegisterReflectionForBinding({CandidaturaCriadaEvent.class, CandidaturaResultadoEvent.class})
 @Configuration
 public class RabbitMqConfig {
 
